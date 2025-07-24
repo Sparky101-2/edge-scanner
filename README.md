@@ -74,7 +74,7 @@ Resources:
 Beyond its core functionality, I chose to share this project due to the unique development challenges posed by Titan Two’s limitations.
 Notably, several functions required frame-splitting (i.e. distributing logic across main{} iterations) to ensure proper execution.
 
-Appreciate you checking this out — if it helped, feel free to leave a comment!
+Appreciate you checking this out — if it helped, please drop a thanks in the comment section!
 
 ## Keywords (for search matching)
 
