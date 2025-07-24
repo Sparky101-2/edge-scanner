@@ -4,7 +4,7 @@
 
 This utility maps out the (x, y) coordinates for every angle from 0° to 359° along the outer edge of a controller stick. Perfect for calibration, visualization, or edge detection tasks.
 
-This utility was created to support the development of [autorun360](https://github.com/Sparky101-2/autorun360), a Titan 2 application that provides a 360° autorun feature for fixed-view games like Diablo IV.
+This utility was created to support the development of [autorun360](https://github.com/Sparky101-2/autorun360), a [Titan 2](https://www.consoletuner.com/products/titan-two/) application that provides a 360° autorun feature for fixed-view games like Diablo IV.
 
 ## How to use
 
