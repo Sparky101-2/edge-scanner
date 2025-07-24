@@ -63,9 +63,9 @@ You should be able to use the XLXS document as an input source so you can recrea
 
 Resources:
 
-- xlsx doc is [here](assets\Google_Sheets_copy\edge-scanner_filters,_extracts_and_orders_data_from_T2_output.xlsx).
+- the xlsx doc is [here](assets/Google_Sheets_copy/edge-scanner_filters,_extracts_and_orders_data_from_T2_output.xlsx).
 
-- script code is [here](assets\Google_Sheets_copy\apps_script_copy.txt).
+- script code is [here](assets/Google_Sheets_copy/apps_script_copy.txt).
 
 #### Option 3 - Do it manually ;)
 
