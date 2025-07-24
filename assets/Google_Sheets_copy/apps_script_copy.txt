@@ -1,0 +1,45 @@
+function clearDataRange() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  sheet.getRange("A2:A1000").clearContent(); // Clears only the values, not formatting
+}
+
+function runAnomalyCheck() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const outputSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet(); // or specify a sheet
+  const outputCell = outputSheet.getRange('F9'); // Change this to where you want the result
+
+  const data = sheet.getRange('B2:B1000').getValues().flat();
+
+  const counts = new Array(360).fill(0);
+  const nonNumericEntries = [];
+
+  data.forEach(value => {
+    if (typeof value === 'number' && !isNaN(value)) {
+      if (value >= 0 && value <= 359) {
+        counts[value]++;
+      }
+    } else if (value !== '') {
+      nonNumericEntries.push(value);
+    }
+  });
+
+  const anomalies = [];
+
+  for (let i = 0; i < 360; i++) {
+    if (counts[i] === 0) {
+      anomalies.push(`Missing: ${i}`);
+    } else if (counts[i] > 1) {
+      anomalies.push(`Duplicate: ${i} (${counts[i]} times)`);
+    }
+  }
+
+  if (nonNumericEntries.length > 0) {
+    anomalies.push(`Non-numeric entries: ${nonNumericEntries.join(', ')}`);
+  }
+
+  const result = anomalies.length > 0
+    ? anomalies.join('; ')
+    : 'All values from 0 to 359 appear exactly once.';
+
+  outputCell.setValue(result);
+}

@@ -1,0 +1,314 @@
+#pragma METAINFO("edge-scanner", 1, 0, "")
+#include <ps4.gph>
+
+// ABOUT: Get Stick Perimeter Coordinates by Stick Angle.
+// See:   https://github.com/Sparky101-2/edge-scanner  for details
+
+// Edge scan 
+fix32 x, y;
+bool isEdgeScanning = FALSE;
+uint32 t_started_edge_scan = 0; 
+uint32 t_next_edge_scan = 0; // time to wait for next edge scan (will be one every 1ms)
+char c_stick_id; // L/R for Left/Right
+uint16 cur_angle;
+
+// ARRAY INITS
+uint8 arr_missing_angles[360];  // 0 = not printed, 1 = printed
+
+// VARS for fn: init_array_with_zeros()
+bool   b_is_running__init_array_with_zeros = FALSE; // determines whether the function is running (working)
+uint32 t_start_time__init_array_with_zeros = 0;     // time this function was last started
+uint32 t_wait_until__init_array_with_zeros = 0;     // the function will wait till this time before doing any work
+uint16 i_cur_index = 0;                             // the current index (of array) that the fn will work on next
+
+// VARS for fn: getNextMissingAngle()
+bool   b_is_running__getNextMissingAngle = FALSE; // determines whether the function is running (working)
+uint32 t_start_time__getNextMissingAngle = 0;     // time this function was last started
+uint32 t_wait_until__getNextMissingAngle = 0;     // the function will wait till this time before doing any work
+uint16 i_cur_index2 = 0;                          // the current index (of array) that the fn will work on next
+uint32 t_last_time_printed_NextMissingAngle = 0;
+uint32 t_wait_until_printing_NextMissingAngle = 0; 
+uint16 i_missing_angles_in_this_array_iteration = 0;
+
+
+// MISC
+const bool IS_DEBUG = 0;
+const bool IS_DEBUG_getNextMissingAngle = 0;
+const bool IS_DEBUG_init_array_with_zeros = 0;
+const bool IS_DEBUG_setArrayElement = 0;
+
+init {
+    init_array_with_zeros(); // be sure the array values are all zeros
+}
+
+main {
+    // main logic
+    scan_for_button_presses();
+    scan_for_next_edge();
+
+    // also run the supporting functions (that need to divide their work across multiple frames (i.e. main{} iterations))
+    init_array_with_zeros_PRIVATE();
+    getNextMissingAngle_PRIVATE();
+}
+
+void scan_for_button_presses(){
+    if (!isEdgeScanning){
+
+        // press square to start scanning LEFT stick outer edge
+        if (event_active (PS4_SQUARE)){
+            c_stick_id = 'L';
+            t_started_edge_scan = system_time();
+            t_next_edge_scan = 0;
+            isEdgeScanning = TRUE;
+            printf("Started scanning *** LEFT *** stick. KEEP LEFT TO AT EDGES THROUGHOUT AND FROM BEGINNING, ELSE RESTART PROCESS.");
+        }
+
+        // press LEFT (D-pad) to start scanning LEFT stick outer edge
+        if (event_active (PS4_RIGHT)){
+            c_stick_id = 'R';
+            t_started_edge_scan = system_time();
+            t_next_edge_scan = 0;
+            isEdgeScanning = TRUE;
+            printf("Started scanning *** RIGHT *** stick. KEEP LEFT TO AT EDGES THROUGHOUT AND FROM BEGINNING, ELSE RESTART PROCESS.");
+        }
+    }
+}
+
+void scan_for_next_edge(){
+    bool b_isAngleCaptured;
+
+    if (isEdgeScanning && 
+        !b_is_running__init_array_with_zeros &&
+        (c_stick_id == 'L' || c_stick_id == 'R')) {  // KEY: we are only checking every 1ms (so no risk of overloading T2)
+
+        if (!b_is_running__getNextMissingAngle &&
+            (system_time() >= t_next_edge_scan)) {
+
+            if (IS_DEBUG && cur_angle == 0) {
+                printf("DEBUG: CUR ANGLE = 0  >>> x = %+0.2f, y = %+0.2f", x, y);
+            }
+
+            // get current stick (x, y)
+            if (c_stick_id == 'L'){
+                x = get_val(STICK_2_X);
+                y = get_val(STICK_2_Y);
+            }
+            else if (c_stick_id == 'R'){
+                x = get_val(STICK_1_X);
+                y = get_val(STICK_1_Y);
+            }
+            else printf ("ERROR invalid input. (scan_for_next_edge())");
+
+            // get stick angle
+            cur_angle = getStickAngle360(x, y);
+            
+            b_isAngleCaptured = isAngleCaptured(cur_angle);   
+            
+            //printf ("b_isAngleCaptured: %d", b_isAngleCaptured);
+
+            if (!b_isAngleCaptured){ // if angle not captured then print out
+                // print the data
+
+                printf("OUTER EDGE %c stick (x, y) data:  (x:%+0.2f, y:%+0.2f) for angle:%d",
+                    c_stick_id, x, y, cur_angle);
+
+                // set this angle as printed   (code: 0 = not printed, 1 = printed )
+                setArrayElement (cur_angle, 1);  
+
+            }
+
+            t_next_edge_scan = system_time() + 1;
+        }
+
+                
+        // output NextMissingAngle
+        if (!b_is_running__getNextMissingAngle &&
+            system_time() > t_started_edge_scan + 2000 && // only start outputting after scanning for 2 secs
+            system_time() >= t_last_time_printed_NextMissingAngle + 1000 // and output every 1 sec
+        ){
+            getNextMissingAngle();
+        }
+    }
+}
+
+void getNextMissingAngle(){
+    if (!b_is_running__getNextMissingAngle){ // only init vars if it's not already running!
+
+        // INIT VARS
+        b_is_running__getNextMissingAngle = TRUE; // setting this flag TRUE will start it running, dividing the work over many frames
+        t_wait_until__getNextMissingAngle = system_time();
+        i_cur_index2 = 0;
+
+        if (IS_DEBUG_getNextMissingAngle) printf("starting getNextMissingAngle()");
+    }
+}
+
+void getNextMissingAngle_PRIVATE(){
+    int value = -1; // value of the array element
+  
+    if (b_is_running__getNextMissingAngle &&
+        system_time() >= t_wait_until_printing_NextMissingAngle ){
+
+        if (i_cur_index2 < 0){
+            printf("ERROR: INDEX < 0");
+        }
+        else if (i_cur_index2 > 360){
+            printf("ERROR: INDEX > MAX (getNextMissingAngle_PRIVATE())");
+        }
+        else {
+            value = arr_missing_angles[i_cur_index2];
+
+            if (system_time() >= t_wait_until__getNextMissingAngle) {
+
+                if (i_cur_index2 == 0){
+                    if (IS_DEBUG_getNextMissingAngle) printf("getNextMissingAngle() - STARTING");
+                    t_start_time__getNextMissingAngle = system_time();
+                }
+                else if (i_cur_index2 >= 359){ 
+                    if (i_missing_angles_in_this_array_iteration == 0){
+
+                        printf("                                            ");
+                        printf("============================================");
+                        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                        printf("  ALL OF THE 360 ANGLES HAVE BEEN PRINTED !!!");
+                        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                        printf("============================================");
+                        printf("  If you are happy with your scan, i.e. the stick was kept to outer edge at ");
+                        printf("  all times, then:                          ");
+                        printf("                                            ");
+                        printf("  Copy the lines of data above and use the spreadsheet in the instructions");
+                        printf("  to calculate the calibration data.        ");
+                        printf("============================================");
+                        printf("                                            ");
+                        isEdgeScanning = FALSE;
+                        
+                        b_is_running__getNextMissingAngle = FALSE;
+                        
+                        init_array_with_zeros(); // RESET the array with zeros, so can make another fresh stick scan
+                        
+                        return;
+                    }
+                    else {
+                        // restart scanning for missing angles from the beginning of the array
+                        
+                        // reset vars
+                        i_missing_angles_in_this_array_iteration = 0;
+                        i_cur_index2 = 0;
+                    }
+                }
+
+                if (value == 0) {              
+                    printf ("NEXT OUTSTANDING ANGLE THAT NEEDS SCANNING:      ====  %d  ====", i_cur_index2);
+                    // setArrayElement(i_cur_index2, 1); THIS WAS THE BIG BUG!! HAVE REMOVED IT, AS WE ONLY NEED TO REPORT IT AS MISSING, NOT SET IT AS PRINTED...
+                    t_last_time_printed_NextMissingAngle = system_time();
+                    t_wait_until_printing_NextMissingAngle = system_time() + 1000;
+                    b_is_running__getNextMissingAngle = FALSE;
+                    i_missing_angles_in_this_array_iteration = i_missing_angles_in_this_array_iteration + 1;
+                    return;
+                }
+                else {
+                    i_cur_index2++;
+                    t_wait_until__getNextMissingAngle = system_time() + 1;
+                }
+            }
+        }
+    }
+}
+
+bool isAngleCaptured (uint16 angle){
+    uint8 v;
+    bool output = FALSE;
+    v = arr_missing_angles[angle];
+
+         if (v == 0) output = FALSE;
+    else if (v == 1) output = TRUE;
+    else {
+        printf("ERROR: Array element value out of bounds. isAngleCaptured()");
+    }
+
+    return output;
+}
+
+void init_array_with_zeros() {
+    // Iterates array, and sets all element values to 0
+
+    // INIT vars
+    b_is_running__init_array_with_zeros = TRUE; // setting this flag TRUE will start it running, dividing the work over many frames
+    t_wait_until__init_array_with_zeros = system_time();
+    i_cur_index = 0;
+}
+
+void init_array_with_zeros_PRIVATE() {
+    // Implementation of init_array_with_zeros() but this SPLITS WORK OVER 1ms INTERVALS 
+    //    ELSE will get BUGS from T2 as can only do so much work every FRAME (or main{} iteration).
+    // NOTE: this function takes 360ms to process for an array with 360 elements
+
+    if (b_is_running__init_array_with_zeros){
+
+        // VALIDATE index in correct
+        if (i_cur_index < 0){
+            printf("ERROR: INDEX < 0");
+        }
+        else if (i_cur_index >= 360){
+            printf("ERROR: INDEX >= MAX (init_array_with_zeros_PRIVATE())");
+        }
+        else {
+            if (system_time() >= t_wait_until__init_array_with_zeros) {
+
+                if (i_cur_index == 0){
+                    if (IS_DEBUG) printf("init_array_with_zeros() - STARTING");
+                    printf("WAIT FOR INITIALISATION BEFORE SCANNING");
+                    t_start_time__init_array_with_zeros = system_time();
+                }
+
+                if (i_cur_index <= 359){
+                    setArrayElement(i_cur_index, 0);
+                }
+
+                if (i_cur_index == 359){
+                    if (IS_DEBUG) printf("init_array_with_zeros() - FINISHED");
+                    printf("INITIALISATION COMPLETE. READY TO SCAN.");
+                    printf("To start scanning the stick outer edge (x, y) coordinates:");
+                    printf(" - 1) Hold the L/R stick to the outer edge (at any angle).");
+                    printf(" - 2) Press SQUARE / RIGHT (D-PAD) to scan either the LEFT or RIGHT stick respectively.");
+                    printf(" - 3) Rotate stick around outer edge repeatedly, until Output panel reports that you have scanned all the angles.");
+                    printf(" - 4) If at any time (from the beginning) the stick isn't on the outer edge, then repeat to get an accurate output.");
+                    b_is_running__init_array_with_zeros = FALSE;
+                    return;
+                }
+
+                i_cur_index++;
+                t_wait_until__init_array_with_zeros = system_time() + 1;
+            }
+        }
+    }
+}
+
+void setArrayElement(uint16 i_element_ID, uint8 value) {
+    if (i_element_ID >= 360 || i_element_ID < 0) {
+        printf("ERROR: setArrayElement index out of bounds: %d", i_element_ID);
+        return;
+    }
+
+    arr_missing_angles[i_element_ID] = value;
+
+    if (IS_DEBUG_setArrayElement) printf("Setting array[%d] to %d.   **********", i_element_ID, value);
+}
+
+int getStickAngle360(fix32 x, fix32 y) {
+    // takes the (x,y) coords of the controller stick position, and outputs the angle
+    // this will ONLY return 0-359 (and not 360)
+    //    (as tested in getStickAngle360.gpc)
+    fix32 angle_rad = atan2(x, -y);
+    fix32 angle_deg = angle_rad * 57.2958;
+    if (angle_deg < 0.0) angle_deg += 360.0;
+    return ((int)(angle_deg + 0.5)) % 360;
+}
+
+void print_formatted_time (uint32 t_time) {
+    // t_time - time in milliseconds
+    uint32 t;
+    t = t_time;
+
+    printf("Time is: %02uhr %02u mins %02u secs %03u ms", t / 3600000, (t % 3600000) / 60000, (t % 60000) / 1000, t % 1000);
+}
