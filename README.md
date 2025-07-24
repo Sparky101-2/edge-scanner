@@ -4,13 +4,13 @@
 
 This utility maps out the (x, y) coordinates for every angle from 0° to 359° along the outer edge of a controller stick. Perfect for calibration, visualization, or edge detection tasks.
 
-This utility was created to support the development of [autorun360](https://github.com/Sparky101-2/autorun360), a [Titan 2](https://www.consoletuner.com/products/titan-two/) application that provides a 360° autorun feature for fixed-view games like Diablo IV.
+This utility was created to support the development of [autorun360](https://github.com/Sparky101-2/autorun360), a [Titan 2](https://www.consoletuner.com/products/titan-two/) script that provides a 360° autorun feature for fixed-view games like [Diablo IV](https://diablo4.blizzard.com).
 
 ## How to use
 
 ### Prepare Gtuner settings
 
-By default GTuner has a limited number of lines it can output to the Output panel.
+By default [GTuner](https://www.consoletuner.com/software/gtuner-iv/) has a limited number of lines it can output to the Output panel.
 
 How to enable more output lines in Gtuner IV
 
