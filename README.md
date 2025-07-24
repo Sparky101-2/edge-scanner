@@ -78,6 +78,6 @@ Appreciate you checking this out — if it helped, feel free to leave a comment!
 
 ## Keywords (for search matching)
 
-Titan 2, Titan2, Titan Two, TitanTwo, gpc, script, console, psn, ps4, ps5, ps6, playstation, xbox
+titan-two, Titan 2, Titan2, Titan Two, TitanTwo, gpc, gtuner, script, console, psn, ps4, ps5, ps6, playstation, xbox
 
 auto run, autorun, 360, peripheral, periphery, outer edge, outer limit, scan, calibration, calibrated, calibrate
